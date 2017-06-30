@@ -483,6 +483,7 @@ public:
 protected:
   // [rejoin]
   bool rejoins_pending;
+  set<mds_rank_t> rejoin_ack_send;    // MDS sends the ACK's rank collection for the rejoin phase
   set<mds_rank_t> rejoin_gather;      // nodes from whom i need a rejoin
   set<mds_rank_t> rejoin_sent;        // nodes i sent a rejoin to
   set<mds_rank_t> rejoin_ack_gather;  // nodes from whom i need a rejoin ack

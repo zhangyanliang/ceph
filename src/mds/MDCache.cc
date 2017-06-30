@@ -2880,13 +2880,14 @@ void MDCache::handle_mds_failure(mds_rank_t who)
   rejoin_gather.insert(who);
   rejoin_sent.erase(who);        // i need to send another
   rejoin_ack_gather.erase(who);  // i'll need/get another.
+  rejoin_ack_send.insert(who);
 
   dout(10) << " resolve_gather " << resolve_gather << dendl;
   dout(10) << " resolve_ack_gather " << resolve_ack_gather << dendl;
   dout(10) << " rejoin_sent " << rejoin_sent << dendl;
   dout(10) << " rejoin_gather " << rejoin_gather << dendl;
   dout(10) << " rejoin_ack_gather " << rejoin_ack_gather << dendl;
-
+  dout(10) << " rejoin_ack_send " << rejoin_ack_send << dendl;
  
   // tell the migrator too.
   migrator->handle_mds_failure_or_stop(who);
@@ -3897,6 +3898,7 @@ void MDCache::rejoin_start(MDSInternalContext *rejoin_done_)
   rejoin_gather = recovery_set;
   // need finish opening cap inodes before sending cache rejoins
   rejoin_gather.insert(mds->get_nodeid());
+  rejoin_ack_send = recovery_set;
   process_imported_caps();
 }
 
@@ -6005,12 +6007,14 @@ void MDCache::rejoin_send_acks()
   }
 
   // send acks
-  for (map<mds_rank_t,MMDSCacheRejoin*>::iterator p = ack.begin();
-       p != ack.end();
+  for (set<mds_rank_t>::iterator p = rejoin_ack_send.begin();
+       p != rejoin_ack_send.end();
        ++p) {
-    ::encode(rejoin_imported_caps[p->first], p->second->imported_caps);
-    mds->send_message_mds(p->second, p->first);
+    ::encode(rejoin_imported_caps[*p], ack[*p]->imported_caps);
+    mds->send_message_mds(ack[*p], *p);
+    dout(7) << "rejoin_send_acks: mds = " << *p << dendl;
   }
+  rejoin_ack_send.clear();
 
   rejoin_imported_caps.clear();
 }
